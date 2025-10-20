@@ -11,11 +11,11 @@
     "fmt": "npx @biomejs/biome check --write"
   },
   "dependencies": {
-    "@resonatehq/gcp": "^0.1.2",
+    "@resonatehq/gcp": "^0.1.4",
     "openai": "^6.6.0"
   },
   "devDependencies": {
     "@types/node": "^24.9.0",
-    "typescript": "^5.6.0"
+    "typescript": "^5.9.3"
   }
 }
