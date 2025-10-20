@@ -88,7 +88,7 @@ function* research(
 				const tool_args = JSON.parse(tool_call.function.arguments);
 				if (tool_name === "research") {
 					const handle = yield* ctx.beginRpc(
-						research,
+						"research",
 						tool_args.topic,
 						depth - 1,
 					);
