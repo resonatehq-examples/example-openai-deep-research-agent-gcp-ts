@@ -1,0 +1,20 @@
+{
+	"name": "example-openai-deep-research-agent-ts-gcp",
+	"version": "1.0.0",
+	"type": "commonjs",
+	"private": true,
+	"main": "dist/index.js",
+	"scripts": {
+		"build": "tsc",
+		"start": "node dist/index.js",
+		"check": "npx @biomejs/biome check",
+		"fmt": "npx @biomejs/biome check --write"
+	},
+	"dependencies": {
+		"@resonatehq/gcp": "^0.1.2",
+		"openai": "^6.6.0"
+	},
+	"devDependencies": {
+		"typescript": "^5.6.0"
+	}
+}
