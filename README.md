@@ -12,7 +12,7 @@ The `research` workflow implements a recursive research agent:
 * It sends a system+user prompt to an LLM (via `OpenAI.chat.completions.create`).
 * If the model returns **tool calls** asking for sub-research, the workflow:
 
-  * spawns parallel child research runs (`ctx.beginRun`) for each subtopic,
+  * spawns parallel child research runs (`ctx.beginRpc`) for each subtopic,
   * awaits their results, and
   * feeds results back into the parent message stream as tool outputs.
 * If the model returns a plain summary (no tool calls), the workflow returns that summary.
