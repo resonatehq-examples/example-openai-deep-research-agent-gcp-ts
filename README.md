@@ -1,90 +1,133 @@
-# Research Agent Workflow — Resonate + Google Cloud Functions
+# Deep Research Agent
 
-This repository contains a single long-running, resumable workflow: a recursive **research agent** that uses the OpenAI chat completions API and is orchestrated with **Resonate**.
-It is designed to run on a serverless platform (e.g., **Google Cloud Functions**) while the **Resonate Server** persists and resumes workflow state between spans.
+A Research Agent powered by Resonate and OpenAI. The Research Agent is a distributed, recursive agent that breaks a research topic into subtopics, researches each subtopic recursively, and synthesizes the results.
 
----
+![Deep Research Agent Demo](doc/research-agent.jpeg)
 
-# Overview
+## How It Works
 
-The `research` workflow implements a recursive research agent:
+This example demonstrates how complex, distributed agentic applications can be implemented with simple code in Resonate's Distributed Async Await: The research agent is a recursive generator function that breaks down topics into subtopics and invokes itself for each subtopic:
 
-* It sends a system+user prompt to an LLM (via `OpenAI.chat.completions.create`).
-* If the model returns **tool calls** asking for sub-research, the workflow:
+```typescript
+function* research(ctx, topic, depth) {
+  const messages = [
+    { role: "system", content: "Break topics into subtopics..." },
+    { role: "user", content: `Research ${topic}` }
+  ];
 
-  * spawns parallel child research runs (`ctx.beginRpc`) for each subtopic,
-  * awaits their results, and
-  * feeds results back into the parent message stream as tool outputs.
-* If the model returns a plain summary (no tool calls), the workflow returns that summary.
+  while (true) {
+    // Ask the LLM about the topic
+    const response = yield* ctx.run(prompt, messages, ...);
+    messages.push(response);
 
-Because the workflow is written as a generator and executed with Resonate, each network call or multi-step operation can be a suspend/resume point — ideal for serverless.
+    // If LLM wants to research subtopics...
+    if (response.tool_calls) {
+      const handles = [];
 
----
+      // Spawn parallel research for each subtopic
+      for (const tool_call of response.tool_calls) {
+        const subtopic = ...;
+        const handle = yield* ctx.beginRpc(research, subtopic, depth - 1);
+        handles.push([tool_call, handle]);
+      }
 
-# Architecture
-
-```
-┌────────────────────────────┐
-│  Developer / CLI           │
-│  resonate invoke research  │
-└─────────────┬──────────────┘
-              │
-              ▼
-┌──────────────────────────────┐
-│      Resonate Server         │
-│  - persists run state        │
-│  - schedules & resumes runs  │
-│  - invokes target function   │
-└─────────────┬───────────────┘
-              │
-              ▼
-┌──────────────────────────────┐
-│ Google Cloud Function (this) │
-│  - registers `research`      │
-│  - calls OpenAI & orchestrates subruns
-└─────────────┬───────────────┘
-              │
-              ▼
-┌──────────────────────────────┐
-│ External APIs (OpenAI)       │
-└──────────────────────────────┘
+      // Wait for all subtopic results
+      for (const [tool_call, handle] of handles) {
+        const result = yield* handle;
+        messages.push({ role: "tool", ..., content: result });
+      }
+    } else {
+      // LLM provided final summary
+      return response.content;
+    }
+  }
+}
 ```
 
----
+The following video visualizes how this recursive pattern creates a dynamic call graph, spawning parallel research branches that fan out as topics are decomposed, then fan back in as results are synthesized:
 
+https://github.com/user-attachments/assets/cf466675-def3-4226-9233-a680cd7e9ecb
 
-# Environment variables / Secrets
-
-* `OPENAI_API_KEY` — OpenAI API key (required)
-
----
-
-# Workflow: key implementation notes
-
-* The LLM call is performed via a helper function `prompt(...)` that returns the model message (and any `tool_calls`).
-* The workflow inspects `message.tool_calls` and — for each `research` tool call — uses:
-
-  * `yield* ctx.beginRun(research, subtopic, depth - 1)` to spawn a child run, then
-  * `yield* handle` to await its result before continuing.
-* The generator returns the final text (summary) once the model stops issuing tool calls.
-
-This pattern allows parallel, resumable sub-research tasks that are resilient to process restarts.
+**Key concepts:**
+- **Concurrent Execution**: Multiple subtopics are researched concurrently via `ctx.beginRpc`
+- **Coordination**: Handles are collected first, then awaited together (fork/join, fan-out/fan-in)
+- **Depth control**: Recursion stops when `depth` reaches 0
 
 ---
 
-## Triggering & Running
+## Installation & Usage
 
-Once the Resonate Server and your Cloud Function are deployed and reachable:
+### 1. Prerequisits
 
-```bash
-resonate invoke research.<run-id> \
-  --func research \
-  --arg "causal inference in neural nets" \
-  --arg 1 \
-  --server https://resonate-server-... \
-  --target https://your-cloud-function-url
+To run this project you need an [OpenAI API Key](https://platform.openai.com) and export the key as an environment variable
+
+```
+export OPENAI_API_KEY="sk-..."
 ```
 
-* `research.<run-id>` — unique run/promise id of your choice.
-* `--arg <topic>` — topic string.
-* `--arg <depth>` — integer; `depth > 0` enables tool/sub-research spawning.
+### 1. Clone the repository
+
+```
+git clone https://github.com/resonatehq-examples/openai-deep-research-agent-ts
+cd openai-deep-research-agent-ts
+```
+
+### 2. Install dependencies
+
+```
+npm install
+```
+
+### 3. Run the Agent locally
+
+```
+npm run dev
+```
+
+### 4. Run the Resonate server
+
+```
+<!--OpenAI API might take some serious time, allow for larger timeouts with-->
+resonate dev --aio-sender-plugin-http-timeout 90s
+```
+
+### 5. Invoke the AI Agent
+
+```
+resonate invoke <promiseId> --func research --arg <prompt> --arg <depth> --target <functionUrl>
+```
+
+Example
+
+```
+resonate invoke foo.1 --func research --arg "What are distributed systems?" --arg 1 --target "http://localhost:8080/"
+```
+
+### 6. Check for the value (might take few seconds)
+
+```
+resonate promises get <promiseId>
+```
+
+Example
+
+```
+resonate promise get foo.1
+```
+
+
+## Troubleshooting
+
+The Deep Research Agent depends on OpenAI and the OpenAI TypeScript and JavaScript SDK. If you are having trouble, verify that your OpenAI credentials are configured correctly and the model is accessible by running the following command in the project's directory:
+
+```
+node -e "import OpenAI from 'openai'; const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY }); (async () => { const res = await client.chat.completions.create({ model: 'gpt-5', messages: [{ role: 'user', content: 'knock knock' }] }); console.log(res.choices[0].message); })();"
+```
+
+If everything is configured correctly, you will see a response from OpenAI such as:
+
+```
+{ role: 'assistant', content: "Who's there?", refusal: null, annotations: []}
+```
+
+If you are still having trouble, please open an issue on the [GitHub repository](https://github.com/resonatehq-examples/openai-deep-research-agent-ts/issues).

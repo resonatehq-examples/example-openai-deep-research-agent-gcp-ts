@@ -8,9 +8,7 @@
 		"resolveJsonModule": true,
 		"strict": true,
 		"skipLibCheck": true,
-		"forceConsistentCasingInFileNames": true,
-		"moduleResolution": "node",
-		"types": ["node"]
+		"forceConsistentCasingInFileNames": true
 	},
-	"include": ["index.ts", "agent.ts"]
+	"include": ["index.ts"]
 }
