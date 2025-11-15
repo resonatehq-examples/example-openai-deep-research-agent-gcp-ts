@@ -1,6 +1,6 @@
-# Deep Research Agent
+# Deep Research Agent on Google Cloud Functions
 
-A Research Agent powered by Resonate and OpenAI. The Research Agent is a distributed, recursive agent that breaks a research topic into subtopics, researches each subtopic recursively, and synthesizes the results.
+A Research Agent powered by Resonate and OpenAI, running on Google Cloud Functions. The Research Agent is a distributed, recursive agent that breaks a research topic into subtopics, researches each subtopic recursively, and synthesizes the results.
 
 ![Deep Research Agent Demo](doc/research-agent.jpeg)
 
