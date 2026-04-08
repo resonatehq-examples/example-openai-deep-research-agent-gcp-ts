@@ -12,7 +12,7 @@
     "dev": "npm run build && npx functions-framework --target=handler --port=8080 --source=dist"
   },
   "dependencies": {
-    "@resonatehq/gcp": "^0.1.5",
+    "@resonatehq/gcp": "^0.1.6",
     "openai": "^6.8.1"
   },
   "devDependencies": {
