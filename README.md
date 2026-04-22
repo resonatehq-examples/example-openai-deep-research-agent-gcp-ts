@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./assets/banner.png" alt="Deep Research Agent on GCP — Resonate example" />
+</p>
+
 # Deep Research Agent on Google Cloud Functions
 
 A Research Agent powered by Resonate and OpenAI, running on Google Cloud Functions. The Research Agent is a distributed, recursive agent that breaks a research topic into subtopics, researches each subtopic recursively, and synthesizes the results.
